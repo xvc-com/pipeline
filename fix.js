@@ -4,26 +4,31 @@ import iflow from "@3-/iflow";
 import 遍历 from "./walk.js";
 import oxfmt from "./oxfmt.js";
 import ERR from "@3-/log/ERR.js";
-import { OxlintNode } from "@teambit/oxc.linter.oxlint-node";
+import log from "@3-/log";
+import { $ } from "@3-/zx";
 
-const oxlint = OxlintNode.create({
-  fixesFlags: {
-    all: true,
-  },
-});
+$.verbose = 1;
 
-const { stdout } = process,
-  retry = async (fn, ...args) => {
+const retry = async (fn, ...args) => {
     let catch_n, pre_err_n, pre;
     for (;;) {
       try {
-        const goon = await fn(...args);
+        const prompt = await fn(...args);
+        if (!prompt) {
+          return;
+        }
+        await iflow(async (send, recv) => {
+          await send(prompt);
+          for await (const text of recv()) {
+            log(text);
+          }
+        });
         catch_n = 0;
-        if (goon) {
-          if (goon == pre && ++pre_err_n > 3) {
+        if (prompt) {
+          if (prompt == pre && ++pre_err_n > 3) {
             return;
           }
-          pre = goon;
+          pre = prompt;
         } else {
           return;
         }
@@ -39,28 +44,25 @@ const { stdout } = process,
     const err_li = await oxfmt(fp);
     if (err_li) {
       const err = err_li.map(({ codeframe }) => codeframe).join("\n\n");
-      let prompt = "修复js错误 : " + err;
-      await iflow(async (send, recv) => {
-        await send(prompt.replaceAll(dir, "."));
-        for await (const text of recv()) {
-          stdout.write(text);
-        }
-      });
-      return err;
+      return "修复js错误 : " + err.replaceAll(dir, ".");
+    }
+  },
+  lint = async () => {
+    const { stdout, stderr } = await $`bun --bun run oxlint --fix --fix-suggestions`;
+    if (stderr) {
+      ERR(stderr);
+    } else {
+      if (!stdout.startsWith("Found 0 warnings and 0 errors.\n")) {
+        return "修复报警, 修复后再次运行 bun run oxlint 确认无误:\n" + stdout;
+      }
     }
   },
   main = async (dir) => {
     const 文件列表 = 遍历(dir);
     for (const fp of 文件列表) {
       await retry(fix, fp);
-
-      const r = await oxlint.run([fp]),
-        { default: result } = r;
-      console.log(r);
-      if (!result.startsWith("Found 0 warnings and 0 errors.\n")) {
-        console.log(fp, result);
-      }
     }
+    await retry(lint);
   };
 
 await main(process.cwd());
