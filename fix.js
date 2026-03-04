@@ -4,7 +4,13 @@ import iflow from "@3-/iflow";
 import 遍历 from "./walk.js";
 import oxfmt from "./oxfmt.js";
 import ERR from "@3-/log/ERR.js";
-import oxlint from "./oxlint.js";
+import { OxlintNode } from "@teambit/oxc.linter.oxlint-node";
+
+const oxlint = OxlintNode.create({
+  fixesFlags: {
+    all: true,
+  },
+});
 
 const { stdout } = process,
   retry = async (fn, ...args) => {
@@ -47,6 +53,13 @@ const { stdout } = process,
     const 文件列表 = 遍历(dir);
     for (const fp of 文件列表) {
       await retry(fix, fp);
+
+      const r = await oxlint.run([fp]),
+        { default: result } = r;
+      console.log(r);
+      if (!result.startsWith("Found 0 warnings and 0 errors.\n")) {
+        console.log(fp, result);
+      }
     }
   };
 

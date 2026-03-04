@@ -1,5 +1,5 @@
 import { globbySync } from "globby";
-
+import x from "path";
 export default (dirPath) =>
   globbySync(["**/*.js"], {
     cwd: dirPath,

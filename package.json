@@ -7,13 +7,13 @@
     "@3-/retry": "^0.0.2",
     "@3-/write": "^0.0.2",
     "@larksuiteoapi/node-sdk": "^1.59.0",
+    "@teambit/oxc.linter.oxlint-node": "^1.0.0",
     "globby": "^16.1.1"
   },
   "devDependencies": {
     "@3-/iflow": "^0.1.3",
     "@3-/zx": "^0.1.18",
     "oxfmt": "^0.36.0",
-    "oxlint": "^1.51.0",
     "zx": "^8.8.5"
   }
 }
